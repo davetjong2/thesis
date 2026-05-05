@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gait Data Collector</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            overscroll-behavior: none;
+            background-color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05);
+        }
+        .soft-input {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s ease;
+        }
+        .soft-input:focus {
+            background-color: #ffffff;
+            border-color: #818cf8;
+            box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.15);
+        }
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+        #image-modal {
+            transition: opacity 0.3s ease;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased p-4 sm:p-6 max-w-md mx-auto min-h-screen flex flex-col justify-center relative">
+
+    <!-- Consent Modal (Tampil saat pertama buka) -->
+    <div id="consent-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div class="bg-white rounded-[2rem] p-6 max-w-sm w-full shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <h2 class="text-xl font-bold text-slate-800 mb-4">Informed Consent</h2>
+            
+            <div class="bg-slate-50 p-4 rounded-2xl mb-5 text-[13px] text-slate-600 leading-relaxed border border-slate-100">
+                Nama saya Dave Tjong, mahasiswa Teknik Informatika Universitas Bina Nusantara (NIM: 2602077736). Saya sedang mengumpulkan data akselerometer dan giroskop untuk skripsi berjudul <b>Explicit Gait Verification for Secure Authentication Using Explainable Federated Learning</b>.<br><br>
+                Dengan melanjutkan, Anda menyetujui pengumpulan dan penggunaan data sensor Anda secara anonim untuk tujuan penelitian akademis. Partisipasi bersifat sukarela dan Anda dapat menarik diri kapan saja.
+            </div>
+
+            <div class="flex items-start space-x-3 mb-6">
+                <input type="checkbox" id="consent-checkbox" class="mt-0.5 w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500">
+                <label for="consent-checkbox" class="text-xs text-slate-700 font-bold cursor-pointer">
+                    Saya setuju berpartisipasi dan mengizinkan akses sensor.
+                </label>
+            </div>
+            <button id="btn-accept-consent" class="w-full bg-slate-200 text-slate-400 font-bold py-4 rounded-xl transition-all duration-200 cursor-not-allowed pointer-events-none uppercase tracking-widest text-[13px]">
+                Lanjutkan
+            </button>
+        </div>
+    </div>
+
+    <!-- Image Zoom Modal -->
+    <div id="image-modal" class="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/90 backdrop-blur-md opacity-0 pointer-events-none p-4" onclick="closeImageModal()">
+        <div class="relative w-full max-w-md flex flex-col items-center">
+            <button class="absolute -top-12 right-0 text-white/70 hover:text-white p-2 transition-colors" onclick="closeImageModal()">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <img id="zoomed-img" src="" class="w-full h-auto bg-white rounded-2xl p-2 drop-shadow-2xl" alt="Zoomed Instruction">
+            <p id="zoomed-desc" class="text-white/90 text-center mt-5 text-sm font-medium leading-relaxed px-4"></p>
+        </div>
+    </div>
+
+    <div class="glass-card rounded-[2rem] overflow-hidden mb-6 mt-4">
+        <!-- Header -->
+        <div class="px-6 py-8 text-center bg-gradient-to-b from-indigo-50/80 to-white border-b border-slate-100">
+            <h1 class="text-2xl font-black text-slate-800 tracking-tight">Gait Data Collector</h1>
+            <p class="text-slate-500 text-sm mt-1.5 font-medium">IMU Sensor Recorder</p>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <!-- Form Identitas -->
+            <div id="form-section" class="space-y-5">
+                <div class="flex items-center justify-between bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100/50">
+                    <label class="block text-[11px] font-bold text-indigo-400 uppercase tracking-widest">Participant ID</label>
+                    <div class="flex items-center">
+                        <span class="text-[10px] bg-indigo-100 text-indigo-600 px-2 py-1 rounded font-bold mr-2 uppercase tracking-widest">Auto</span>
+                        <span id="participant-id-display" class="font-mono font-bold text-slate-700 text-lg">P-0000</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Umur</label>
+                        <input type="number" id="age" placeholder="Contoh: 22" class="soft-input w-full px-4 py-3.5 rounded-xl outline-none text-slate-700 font-medium placeholder-slate-300">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Gender</label>
+                        <div class="relative">
+                            <select id="gender" class="soft-input w-full px-4 py-3.5 rounded-xl outline-none text-slate-700 font-medium cursor-pointer">
+                                <option value="L">Laki-laki</option>
+                                <option value="P">Perempuan</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bagian Progress Skenario -->
+                <div class="pt-2">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Progress Skenario</span>
+                        <span id="scenario-progress" class="text-[11px] font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded-md">1 / 5</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                        <div id="progress-bar" class="bg-indigo-500 h-2.5 rounded-full transition-all duration-500" style="width: 20%"></div>
+                    </div>
+                </div>
+
+                <!-- Instruksi Visual -->
+                <div class="bg-slate-50/70 rounded-2xl p-5 border border-slate-100 flex flex-col items-center transition-all cursor-zoom-in hover:bg-slate-100/70 hover:border-indigo-100 group" onclick="openImageModal()">
+                    <div class="flex items-center justify-center space-x-1.5 mb-2">
+                        <p id="scenario-title" class="text-[11px] font-bold text-indigo-500 uppercase tracking-[0.15em]">1. TANGAN KANAN</p>
+                        <svg class="w-3.5 h-3.5 text-indigo-300 group-hover:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>
+                    </div>
+                    <img id="scenario-img" src="icons/01_tangan_kanan_samping_pinggang.png" alt="Instruksi Skenario" class="w-full max-h-40 object-contain mix-blend-multiply mb-3 transition-all duration-300 pointer-events-none">
+                    <p id="scenario-desc" class="text-sm text-center text-slate-600 font-medium leading-relaxed pointer-events-none">
+                        Berjalan lurus secara natural dengan Handphone digenggam di tangan KANAN di samping pinggang.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Status & Countdown -->
+            <div id="recording-status" class="py-2 text-center hidden">
+                <p id="status-text" class="text-[11px] font-bold text-slate-400 uppercase tracking-widest transition-colors">Siap Merekam</p>
+                <p id="timer-text" class="text-6xl font-mono font-black text-indigo-500 mt-2 tracking-tighter drop-shadow-sm">20.0</p>
+            </div>
+
+            <!-- Data Preview (opsional untuk debug) -->
+            <div id="sensor-preview" class="hidden bg-slate-50 p-5 rounded-2xl text-xs font-mono border border-slate-100 shadow-inner">
+                <div class="mb-4">
+                    <span class="font-bold text-slate-400 uppercase tracking-widest text-[9px]">Accelerometer</span>
+                    <div id="accel-data" class="text-slate-700 mt-1.5 text-sm font-medium">X: 0.00 | Y: 0.00 | Z: 0.00</div>
+                </div>
+                <div>
+                    <span class="font-bold text-slate-400 uppercase tracking-widest text-[9px]">Gyroscope</span>
+                    <div id="gyro-data" class="text-slate-700 mt-1.5 text-sm font-medium">X: 0.00 | Y: 0.00 | Z: 0.00</div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-200/60 text-right text-slate-400 text-[10px] uppercase tracking-widest font-sans">
+                    Total Data Points: <span id="data-count" class="font-bold text-indigo-500 ml-1 text-sm">0</span>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="pt-2 relative">
+                <button id="btn-action" class="w-full bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-bold py-4 px-6 rounded-2xl shadow-[0_8px_20px_-6px_rgba(99,102,241,0.6)] transition-all duration-200 active:scale-[0.97] active:shadow-none uppercase tracking-widest text-[13px]">
+                    Mulai Skenario 1
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
